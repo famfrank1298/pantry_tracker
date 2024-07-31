@@ -9,7 +9,6 @@ import {
 } from "@mui/material";
 import { ThemeProvider, createTheme } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
-import items from "./items";
 import { useState, useEffect, SetStateAction } from "react";
 import {
   collection,
@@ -20,15 +19,9 @@ import {
   QuerySnapshot,
   doc,
   deleteDoc,
+  updateDoc,
 } from "firebase/firestore";
-import { db } from "./firebase";
-
-interface Item {
-  name: string;
-  price: number;
-  amount: number;
-  id: string;
-}
+import { db, Item } from "./firebase";
 
 const darkTheme = createTheme({
   palette: {
@@ -43,11 +36,35 @@ export default function Home() {
 
   const handleChange = (event: { target: { name: any; value: any } }) => {
     const { name, value } = event.target;
-    setItem((prevValues) => ({
-      ...prevValues,
-      [name]: value,
-    }));
+    console.log("name: ", name);
+
+    if (name == "amount" || name == "price") {
+      // remove the leading zero in the textfield
+      let newValue = value.replace(/^0+/, "") || "0";
+      setItem((prevValues) => ({
+        ...prevValues,
+        [name]: newValue,
+      }));
+    } else {
+      setItem((prevValues) => ({
+        ...prevValues,
+        [name]: value,
+      }));
+    }
   };
+  // read/storing items from database
+  useEffect(() => {
+    const q = query(collection(db, "pantry"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      let pantryArr: SetStateAction<Item[]> = [];
+
+      querySnapshot.forEach((doc) => {
+        const item = doc.data() as Item;
+        pantryArr.push({ ...item, id: doc.id });
+      });
+      setPantry(pantryArr);
+    });
+  }, []);
 
   // add item to database
   const submitItem = async () => {
@@ -64,22 +81,8 @@ export default function Home() {
     }
   };
 
-  // read/storing items from database
-  useEffect(() => {
-    const q = query(collection(db, "pantry"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      let pantryArr: SetStateAction<Item[]> = [];
-
-      querySnapshot.forEach((doc) => {
-        const item = doc.data() as Item;
-        pantryArr.push({ ...item, id: doc.id });
-      });
-      setPantry(pantryArr);
-    });
-  }, []);
-
-  //delete items from database
-  function removeItem(index: number) {
+  // delete items from database
+  const removeItem = async (index: number) => {
     setPantry((prevItems) => prevItems.filter((_, i) => i !== index));
     const id = pantry[index].id;
     const docRef = doc(db, "pantry", id);
@@ -90,106 +93,180 @@ export default function Home() {
       .catch((error) => {
         console.error("Error removing document: ", error);
       });
-  }
+  };
+
+  // update item from database
+  const increaseItemCount = async (index: number) => {
+    const id = pantry[index].id;
+    const docRef = doc(db, "pantry", id);
+    await updateDoc(docRef, {
+      amount: pantry[index].amount + 1,
+    });
+  };
+
+  const decreaseItemCount = async (index: number) => {
+    const id = pantry[index].id;
+    const docRef = doc(db, "pantry", id);
+    await updateDoc(docRef, {
+      amount: pantry[index].amount - 1,
+    });
+  };
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <Container
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "100vw",
-          height: "100vh",
-          gap: "30px",
-          bgcolor: "#212121",
-        }}
-      >
-        <Typography variant="h3"> Pantry Tracker</Typography>
-        <Box sx={{ bgcolor: "#181818", p: 3 }}>
+      <Box sx={{ bgcolor: "#191970" }}>
+        <Container
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100vw",
+            height: "100vh",
+            gap: "30px",
+            backgroundImage: `url('/star_bg.gif')`,
+            backgroundSize: "cover", // Cover the entire container
+            backgroundPosition: "center", // Center the image
+            backgroundRepeat: "no-repeat",
+            opacity: "80%",
+            boxShadow: "0 0 10px white",
+          }}
+        >
+          <Typography variant="h3" sx={{ textShadow: "0 0 3px white" }}>
+            {" "}
+            Pantry Tracker
+          </Typography>
           <Box
             sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "16px",
-              marginBottom: 4,
+              bgcolor: "#191970",
+              p: 3,
+              border: "3px solid white",
+              boxShadow: "0 0 10px white",
             }}
           >
-            <TextField
-              name="name"
-              id="outlined-basic"
-              label="Enter Item"
-              variant="outlined"
-              value={item.name}
-              onChange={handleChange}
-              required
-              error={error}
-              helperText={error ? "This field is required" : ""}
-            />
-            <TextField
-              name="amount"
-              id="outlined-basic"
-              label="Quantity"
-              variant="outlined"
-              type="number"
-              value={item.amount}
-              onChange={handleChange}
-              required
-              error={error}
-              helperText={error ? "This field is required" : ""}
-            />
-            <TextField
-              name="price"
-              id="outlined-basic"
-              label="Base Price"
-              variant="outlined"
-              type="number"
-              value={item.price}
-              onChange={handleChange}
-              required
-              error={error}
-              helperText={error ? "This field is required" : ""}
-            />
-            <Button variant="contained" onClick={submitItem}>
-              <Typography variant="h6">+</Typography>
-            </Button>
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "stretch",
-              justifyContent: "center",
-              gap: "15px",
-            }}
-          >
-            {pantry.map((item, index) => (
-              <Paper
-                key={index}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-evenly",
-                  gap: "16px",
-                  p: "1rem",
-                  elevation: "3",
-                }}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "16px",
+                marginBottom: 4,
+              }}
+            >
+              <TextField
+                name="name"
+                id="outlined-basic"
+                label="Enter Item"
+                variant="outlined"
+                value={item.name}
+                onChange={handleChange}
+                required
+                error={error}
+                helperText={error ? "This field is required" : ""}
+              />
+              <TextField
+                name="amount"
+                id="outlined-basic"
+                label="Quantity"
+                variant="outlined"
+                type="number"
+                value={item.amount}
+                onChange={handleChange}
+                inputProps={{ min: 1 }}
+                required
+                error={error}
+                helperText={error ? "This field is required" : ""}
+              />
+              <TextField
+                name="price"
+                id="outlined-basic"
+                label="Base Price"
+                variant="outlined"
+                type="number"
+                value={item.price}
+                onChange={handleChange}
+                inputProps={{ min: 0.01 }}
+                required
+                error={error}
+                helperText={error ? "This field is required" : ""}
+              />
+              <Button
+                variant="contained"
+                onClick={submitItem}
+                sx={{ "&:hover": { boxShadow: "0 0 2px white" } }}
               >
-                <Typography variant="h5">{item.name}</Typography>
-                <Typography variant="h5">
-                  ${item.price * item.amount}
+                <Typography variant="h6">+</Typography>
+              </Button>
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "stretch",
+                justifyContent: "center",
+                gap: "15px",
+                borderBottom: "1px solid white",
+              }}
+            >
+              {pantry.length > 0 ? (
+                pantry.map((item, index) => (
+                  <Paper
+                    key={index}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "16px",
+                      p: "1rem",
+                      elevation: "3",
+                      bgcolor: "transparent",
+                      boxShadow: "0 0 5px white",
+                    }}
+                  >
+                    <Typography>{item.name}</Typography>
+                    <Typography>Price: ${item.price * item.amount}</Typography>
+                    <Typography>Quantity: x{item.amount}</Typography>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "2px",
+                        elevation: "3",
+                      }}
+                    >
+                      <Button
+                        onClick={() => increaseItemCount(index)}
+                        sx={{ "&:hover": { boxShadow: "0 0 2px white" } }}
+                      >
+                        ▲
+                      </Button>
+                      <Button
+                        onClick={() => decreaseItemCount(index)}
+                        sx={{ "&:hover": { boxShadow: "0 0 2px white" } }}
+                      >
+                        ▼
+                      </Button>
+                      <Button
+                        onClick={() => removeItem(index)}
+                        sx={{ "&:hover": { boxShadow: "0 0 2px white" } }}
+                      >
+                        X
+                      </Button>
+                    </Box>
+                  </Paper>
+                ))
+              ) : (
+                <Typography sx={{ textAlign: "center" }}>
+                  There are currently no items in your pantry
                 </Typography>
-                <Typography variant="h5">x{item.amount}</Typography>
-                <Button onClick={() => removeItem(index)}>X</Button>
-              </Paper>
-            ))}
+              )}
+            </Box>
           </Box>
-        </Box>
-      </Container>
+        </Container>
+      </Box>
     </ThemeProvider>
   );
 }

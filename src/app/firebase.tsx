@@ -1,6 +1,13 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
+export interface Item {
+  name: string;
+  price: number;
+  amount: number;
+  id: string;
+}
+
 // My Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_API_KEY,
@@ -10,8 +17,6 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_APP_ID,
 };
-
-console.log("env", process.env.NEXT_PUBLIC_SENDER_ID);
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
