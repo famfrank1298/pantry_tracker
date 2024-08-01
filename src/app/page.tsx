@@ -4,6 +4,7 @@ import {
   Button,
   Container,
   Paper,
+  Stack,
   TextField,
   Typography,
 } from "@mui/material";
@@ -107,9 +108,14 @@ export default function Home() {
   const decreaseItemCount = async (index: number) => {
     const id = pantry[index].id;
     const docRef = doc(db, "pantry", id);
-    await updateDoc(docRef, {
-      amount: pantry[index].amount - 1,
-    });
+    const newVal = pantry[index].amount - 1;
+    if (newVal <= 0) {
+      removeItem(index);
+    } else {
+      await updateDoc(docRef, {
+        amount: newVal,
+      });
+    }
   };
 
   return (
@@ -126,8 +132,8 @@ export default function Home() {
             height: "100vh",
             gap: "30px",
             backgroundImage: `url('/star_bg.gif')`,
-            backgroundSize: "cover", // Cover the entire container
-            backgroundPosition: "center", // Center the image
+            backgroundSize: "cover",
+            backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
             opacity: "80%",
             boxShadow: "0 0 10px white",
@@ -225,21 +231,25 @@ export default function Home() {
                       boxShadow: "0 0 5px white",
                     }}
                   >
-                    <Typography>{item.name}</Typography>
-                    <Typography>Price: ${item.price * item.amount}</Typography>
-                    <Typography>Quantity: x{item.amount}</Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "2px",
-                        elevation: "3",
-                      }}
-                    >
+                    <Typography variant="h6">{item.name}</Typography>
+                    <Box>
+                      <Typography component="span"> Price:</Typography>{" "}
+                      <Typography component="span" variant="h6">
+                        ${item.price * item.amount}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography component="span">Quantity:</Typography>{" "}
+                      <Typography component="span" variant="h6">
+                        x{item.amount}
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={1}>
                       <Button
                         onClick={() => increaseItemCount(index)}
-                        sx={{ "&:hover": { boxShadow: "0 0 2px white" } }}
+                        sx={{
+                          "&:hover": { boxShadow: "0 0 2px white" },
+                        }}
                       >
                         ▲
                       </Button>
@@ -255,7 +265,7 @@ export default function Home() {
                       >
                         X
                       </Button>
-                    </Box>
+                    </Stack>
                   </Paper>
                 ))
               ) : (
