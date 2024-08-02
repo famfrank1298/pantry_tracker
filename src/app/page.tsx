@@ -211,9 +211,10 @@ export default function Home() {
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "stretch",
-                justifyContent: "center",
                 gap: "15px",
-                borderBottom: "1px solid white",
+                height: "250px",
+                overflowY: "scroll",
+                padding: "5px",
               }}
             >
               {pantry.length > 0 ? (
